@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="theme-color" content="#3B6D11"/>
+<meta property="og:title" content="Encuesta de Movilidad · PYRSA"/>
+<meta property="og:description" content="Ayúdanos a mejorar los desplazamientos al trabajo. Anónima, 5 minutos."/>
+<title>Encuesta de Movilidad · PYRSA</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --g50:#EAF3DE;--g100:#C0DD97;--g200:#97C459;--g400:#639922;
+  --g600:#3B6D11;--g800:#27500A;
+  --t50:#E1F5EE;--t600:#0F6E56;--t800:#085041;
+  --a50:#FAEEDA;--a100:#FAC775;--a600:#854F0B;
+  --r50:#FCEBEB;--r600:#A32D2D;
+  --gr50:#F2F3F0;--gr100:#D6D9D0;
+  --bg:#fff;--bg2:#f4f6f1;--bg3:#eaede5;
+  --tx:#18201a;--muted:#5a6057;--hint:#8a9086;--bord:#cdd2c7;
+  --R:10px;--Rlg:14px;--tap:52px;
+  --safe-b:env(safe-area-inset-bottom,0px)
+}
+@media(prefers-color-scheme:dark){
+  :root{--bg:#161a14;--bg2:#1d211a;--bg3:#252a22;--tx:#e2e8dc;--muted:#8a9086;--hint:#5e6459;--bord:#313830}
+}
+html,body{height:100%;-webkit-text-size-adjust:100%}
+body{font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue",Arial,sans-serif;
+  font-size:16px;line-height:1.55;background:var(--bg2);color:var(--tx);
+  -webkit-tap-highlight-color:transparent;overscroll-behavior-y:none}
+
+/* ── Header ── */
+.hdr{background:var(--g600);padding:max(14px,env(safe-area-inset-top,14px)) 16px 14px;
+  display:flex;align-items:center;gap:12px;position:sticky;top:0;z-index:100}
+.hdr-icon{width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,.18);
+  display:flex;align-items:center;justify-content:center;font-size:19px;flex-shrink:0}
+.hdr-text h1{font-size:15px;font-weight:600;color:#fff;margin-bottom:1px}
+.hdr-text p{font-size:11px;color:rgba(255,255,255,.72);line-height:1.3}
+
+/* ── Progress ── */
+.prog{background:var(--bg);border-bottom:1px solid var(--bord);padding:10px 16px 8px;
+  position:sticky;top:66px;z-index:99}
+.prog-lbl{font-size:11px;color:var(--muted);font-weight:500;margin-bottom:7px;display:flex;align-items:center;justify-content:space-between}
+.prog-lbl span{font-size:11px;color:var(--hint)}
+.prog-bar{display:flex;gap:4px;margin-bottom:6px}
+.ps{height:3px;flex:1;border-radius:2px;background:var(--bord);transition:background .35s}
+.ps.done{background:var(--g600)}
+.ps.active{background:var(--g200)}
+.prog-names{display:flex;gap:4px}
+.pn{flex:1;font-size:9px;color:var(--hint);text-align:center;line-height:1.2;transition:color .2s}
+.pn.active{color:var(--g600);font-weight:600}
+
+/* ── Scroll area ── */
+.scroll{overflow-y:auto;-webkit-overflow-scrolling:touch;
+  padding:14px 12px calc(76px + var(--safe-b))}
+
+/* ── Cards / Steps ── */
+.card{background:var(--bg);border:1px solid var(--bord);border-radius:var(--Rlg);
+  padding:18px 16px;margin-bottom:10px}
+.step{display:none}
+.step.active{display:block}
+.sbadge{display:inline-block;background:var(--g50);color:var(--g800);font-size:10px;
+  font-weight:600;padding:3px 10px;border-radius:20px;margin-bottom:10px;
+  border:1px solid var(--g100);letter-spacing:.02em}
+.stitle{font-size:18px;font-weight:600;margin-bottom:4px;color:var(--tx)}
+.ssub{font-size:13px;color:var(--muted);line-height:1.55;margin-bottom:16px}
+.slbl{font-size:10px;font-weight:600;color:var(--g600);text-transform:uppercase;
+  letter-spacing:.08em;margin:18px 0 10px;padding-bottom:5px;border-bottom:1px solid var(--bord)}
+
+/* ── Fields ── */
+.fld{margin-bottom:14px}
+.fld>label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin-bottom:7px}
+.fld small{font-size:11px;color:var(--hint);font-weight:400;display:block;margin-top:3px}
+.req{color:#c0392b;margin-left:2px}
+input[type=text],input[type=time],input[type=number],select,textarea{
+  width:100%;padding:12px 14px;font-size:16px;border:1px solid var(--bord);
+  border-radius:var(--R);background:var(--bg);color:var(--tx);
+  outline:none;-webkit-appearance:none;font-family:inherit;transition:border-color .15s,box-shadow .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--g600);box-shadow:0 0 0 3px rgba(59,109,17,.1)}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24'%3E%3Cpath fill='%23888' d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:36px}
+textarea{min-height:88px;resize:vertical;font-size:15px}
+.time-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.time-row .fld{margin-bottom:0}
+
+/* ── Options ── */
+.opts{display:flex;flex-direction:column;gap:7px}
+.opts.pills{flex-direction:row;flex-wrap:wrap;gap:7px}
+.opt{display:flex;align-items:center;gap:12px;padding:12px 14px;
+  border:1px solid var(--bord);border-radius:var(--R);background:var(--bg);
+  cursor:pointer;min-height:var(--tap);transition:border-color .12s,background .12s;
+  -webkit-tap-highlight-color:transparent;user-select:none}
+.opt:active{background:var(--g50)}
+.opt.sel{border-color:var(--g600);background:var(--g50)}
+.opt input[type=radio],.opt input[type=checkbox]{width:20px;height:20px;accent-color:var(--g600);flex-shrink:0;cursor:pointer}
+.opt span{font-size:14px;line-height:1.4;flex:1}
+.opt.pill{min-height:40px;padding:8px 14px;border-radius:20px;justify-content:center;flex:0 0 auto}
+.opt.pill span{font-size:13px}
+
+/* ── Transport grid ── */
+.tgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tc{border:1.5px solid var(--bord);border-radius:var(--R);padding:14px 8px;
+  text-align:center;cursor:pointer;background:var(--bg);transition:border-color .12s,background .12s;
+  min-height:82px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+  -webkit-tap-highlight-color:transparent;user-select:none}
+.tc:active,.tc.sel{border-color:var(--g600);background:var(--g50)}
+.tc i{font-size:26px;color:var(--g600)}
+.tc span{font-size:11px;color:var(--muted);line-height:1.25}
+.tc.sel span,.tc.sel i{color:var(--g800)}
+
+/* ── Map ── */
+.map-wrap{border:1px solid var(--bord);border-radius:var(--R);overflow:hidden;margin:10px 0}
+#map{height:260px;width:100%}
+.map-hint{font-size:12px;color:var(--muted);padding:6px 0 2px;display:flex;align-items:center;gap:5px}
+.geo-row{display:flex;gap:8px;margin-bottom:7px}
+.geo-row input{flex:1}
+.btn-geo{min-height:var(--tap);padding:0 14px;border:1px solid var(--bord);border-radius:var(--R);
+  background:var(--bg2);color:var(--tx);cursor:pointer;font-size:14px;
+  display:flex;align-items:center;gap:6px;white-space:nowrap;flex-shrink:0;transition:background .12s}
+.btn-geo:active{background:var(--g50);border-color:var(--g600)}
+#geo-st{font-size:12px;color:var(--muted);min-height:16px;margin-bottom:6px}
+
+/* ── Route box ── */
+.rbox{border-radius:var(--R);padding:12px 14px;margin-top:10px;border:1px solid var(--bord);
+  transition:background .2s}
+.rbox.loading{background:var(--gr50)}
+.rbox.ok{background:var(--g50);border-color:var(--g100)}
+.rbox.warn{background:var(--a50);border-color:var(--a100)}
+.rbox.err{background:var(--r50);border-color:var(--r600)}
+.rbox-main{font-size:19px;font-weight:700;color:var(--g800)}
+.rbox-sub{font-size:12px;color:var(--muted);margin-top:3px}
+.rbox-proxy{font-size:11px;color:var(--a600);margin-top:4px;font-style:italic}
+
+/* ── Privacy note ── */
+.privacy{display:flex;align-items:flex-start;gap:10px;background:var(--t50);
+  border:1px solid rgba(15,110,86,.25);border-radius:var(--R);padding:12px 14px;margin-bottom:16px}
+.privacy i{font-size:18px;color:var(--t600);flex-shrink:0;margin-top:1px}
+.privacy p{font-size:12px;color:var(--t800);line-height:1.55}
+
+/* ── Bottom nav ── */
+.bot{position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--bg);
+  border-top:1px solid var(--bord);padding:10px 14px calc(10px + var(--safe-b));
+  display:flex;gap:10px;box-shadow:0 -4px 16px rgba(0,0,0,.06)}
+.btn-next{flex:1;min-height:var(--tap);padding:0 16px;font-size:15px;font-weight:600;
+  background:var(--g600);color:#fff;border:none;border-radius:var(--R);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s}
+.btn-next:active{background:var(--g800)}
+.btn-next:disabled{opacity:.38;pointer-events:none}
+.btn-back{min-height:var(--tap);padding:0 16px;font-size:15px;
+  background:var(--bg2);border:1px solid var(--bord);border-radius:var(--R);
+  cursor:pointer;color:var(--tx);display:flex;align-items:center;gap:6px;transition:background .12s}
+.btn-back:active{background:var(--bg3)}
+.btn-back.gone{display:none}
+
+/* ── Success screen ── */
+.success{text-align:center;padding:2rem 1rem}
+.ok-ring{width:68px;height:68px;border-radius:50%;background:var(--g50);
+  border:2px solid var(--g100);display:flex;align-items:center;justify-content:center;
+  margin:0 auto 18px}
+.ok-ring i{font-size:34px;color:var(--g600)}
+.success h2{font-size:20px;font-weight:700;margin-bottom:8px}
+.success p{font-size:14px;color:var(--muted);line-height:1.6;margin-bottom:6px}
+.anon-box{background:var(--gr50);border-radius:var(--R);padding:12px 14px;
+  font-size:12px;color:var(--muted);margin-top:18px;text-align:left;line-height:1.6;border:1px solid var(--bord)}
+.anon-box b{color:var(--tx)}
+
+/* ── Alerts ── */
+.aw{background:var(--a50);border:1px solid var(--a100);border-radius:var(--R);
+  padding:11px 14px;font-size:12px;color:var(--a600);margin-bottom:12px;line-height:1.45;
+  display:flex;align-items:flex-start;gap:8px}
+.aw i{flex-shrink:0;font-size:15px;margin-top:1px}
+
+.hidden{display:none!important}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{animation:spin .8s linear infinite;display:inline-block}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="hdr-icon">🚲</div>
+  <div class="hdr-text">
+    <h1>Encuesta de Movilidad</h1>
+    <p>PYRSA · Plan de Movilidad Sostenible al Trabajo</p>
+  </div>
+</div>
+
+<div class="prog" id="progBar">
+  <div class="prog-lbl">
+    <span id="plbl">Sección A · Perfil</span>
+    <span id="pstep">1 / 5</span>
+  </div>
+  <div class="prog-bar">
+    <div class="ps active" id="ps0"></div>
+    <div class="ps" id="ps1"></div>
+    <div class="ps" id="ps2"></div>
+    <div class="ps" id="ps3"></div>
+    <div class="ps" id="ps4"></div>
+  </div>
+  <div class="prog-names">
+    <div class="pn active" id="pn0">A. Perfil</div>
+    <div class="pn" id="pn1">Ubicación</div>
+    <div class="pn" id="pn2">B. Movilidad</div>
+    <div class="pn" id="pn3">C. Vehículo</div>
+    <div class="pn" id="pn4">D. Obstáculos</div>
+  </div>
+</div>
+
+<div class="scroll" id="scroll">
+
+  <!-- ══ A: PERFIL ══ -->
+  <div class="step active" id="step0">
+    <div class="card">
+      <div class="sbadge">Sección A · 1 de 5</div>
+      <div class="stitle">Perfil y usuario</div>
+      <div class="ssub">Respuestas completamente anónimas. No se guarda ningún dato personal identificable.</div>
+
+      <div class="privacy">
+        <i class="ti ti-shield-lock"></i>
+        <p><b>Privacidad:</b> no se recoge tu nombre, email ni dirección exacta. Las coordenadas se desplazan ~500 m antes de guardarse.</p>
+      </div>
+
+      <div class="slbl">Datos personales</div>
+
+      <div class="fld">
+        <label>1. Género <span class="req">*</span></label>
+        <div class="opts pills">
+          <label class="opt pill"><input type="radio" name="genero" value="Mujer"/><span>Mujer</span></label>
+          <label class="opt pill"><input type="radio" name="genero" value="Hombre"/><span>Hombre</span></label>
+          <label class="opt pill"><input type="radio" name="genero" value="Prefiero no contestar"/><span>Prefiero no contestar</span></label>
+        </div>
+      </div>
+
+      <div class="fld">
+        <label>2. Edad <span class="req">*</span></label>
+        <select id="selEdad">
+          <option value="">Selecciona…</option>
+          <option>Menor de 25 años</option><option>25-34 años</option>
+          <option>35-44 años</option><option>45-54 años</option>
+          <option>55-65 años</option><option>Más de 65 años</option>
+        </select>
+      </div>
+
+      <div class="fld">
+        <label>4. ¿Tienes alguna limitación de movilidad? <span class="req">*</span></label>
+        <div class="opts pills">
+          <label class="opt pill"><input type="radio" name="limitacion" value="Sí" onclick="sh('fAdapt',1)"/><span>Sí</span></label>
+          <label class="opt pill"><input type="radio" name="limitacion" value="No" onclick="sh('fAdapt',0)"/><span>No</span></label>
+          <label class="opt pill"><input type="radio" name="limitacion" value="Prefiero no contestar" onclick="sh('fAdapt',0)"/><span>Prefiero no contestar</span></label>
+        </div>
+      </div>
+
+      <div class="fld hidden" id="fAdapt">
+        <label>5. ¿Necesitas adaptación o apoyo?
+          <small>Solo si respondiste SÍ en la pregunta anterior.</small></label>
+        <div class="opts pills">
+          <label class="opt pill"><input type="radio" name="adapt" value="Sí"/><span>Sí</span></label>
+          <label class="opt pill"><input type="radio" name="adapt" value="No"/><span>No</span></label>
+          <label class="opt pill"><input type="radio" name="adapt" value="Prefiero no contestar"/><span>Prefiero no contestar</span></label>
+        </div>
+      </div>
+
+      <div class="slbl">Presencia y horario</div>
+
+      <div class="fld">
+        <label>6. ¿Con qué frecuencia acudes? <span class="req">*</span></label>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="frecuencia" value="1-2 días/semana"/><span>1–2 días / semana</span></label>
+          <label class="opt"><input type="radio" name="frecuencia" value="3-4 días/semana"/><span>3–4 días / semana</span></label>
+          <label class="opt"><input type="radio" name="frecuencia" value="5 días/semana"/><span>5 días / semana (todos)</span></label>
+        </div>
+      </div>
+
+      <div class="fld">
+        <label>7. Turno habitual <span class="req">*</span></label>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="turno" value="Mañana"/><span>Mañana</span></label>
+          <label class="opt"><input type="radio" name="turno" value="Tarde"/><span>Tarde</span></label>
+          <label class="opt"><input type="radio" name="turno" value="Noche"/><span>Noche</span></label>
+          <label class="opt"><input type="radio" name="turno" value="Jornada partida"/><span>Jornada partida</span></label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ UBICACIÓN ══ -->
+  <div class="step" id="step1">
+    <div class="card">
+      <div class="sbadge">Ubicación · 2 de 5</div>
+      <div class="stitle">Municipio y punto de origen</div>
+      <div class="ssub">Solo se guarda el municipio y unas coordenadas desplazadas (~500 m). No tu dirección exacta.</div>
+
+      <div class="fld">
+        <label for="municipio">3. Municipio de residencia <span class="req">*</span></label>
+        <input type="text" id="municipio" placeholder="Ej: Zaragoza, Utebo, Cuarte…" autocomplete="address-level2"/>
+      </div>
+
+      <div class="fld">
+        <label>Dirección de origen
+          <small>Para calcular la distancia real por ruta. No se almacena.</small></label>
+        <div class="geo-row">
+          <input type="text" id="fdir" placeholder="Calle y número, municipio…"
+            onkeydown="if(event.key==='Enter'){event.preventDefault();geocode()}"/>
+          <button class="btn-geo" onclick="geocode()"><i class="ti ti-search"></i> Buscar</button>
+        </div>
+        <div id="geo-st"></div>
+      </div>
+
+      <div class="map-wrap"><div id="map"></div></div>
+      <p class="map-hint"><i class="ti ti-hand-finger"></i> Toca el mapa o arrastra el marcador para ajustar. El punto verde es PYRSA.</p>
+      <div id="rbox1" class="rbox hidden"></div>
+    </div>
+  </div>
+
+  <!-- ══ B: MOVILIDAD ══ -->
+  <div class="step" id="step2">
+    <div class="card">
+      <div class="sbadge">Sección B · 3 de 5</div>
+      <div class="stitle">Movilidad al trabajo</div>
+      <div class="ssub">Cómo llegas ahora y cómo te gustaría moverte.</div>
+
+      <div class="time-row">
+        <div class="fld">
+          <label for="hlleg">1. Hora de llegada <span class="req">*</span></label>
+          <input type="time" id="hlleg"/>
+        </div>
+        <div class="fld">
+          <label for="hsal">2. Hora de salida <span class="req">*</span></label>
+          <input type="time" id="hsal"/>
+        </div>
+      </div>
+
+      <div class="slbl">Transporte actual</div>
+      <div class="fld">
+        <label>3. Modo de transporte principal <span class="req">*</span></label>
+        <div class="tgrid" id="tgA">
+          <div class="tc" data-v="Andando" data-p="foot" onclick="selT('tgA',this);calcRoute()"><i class="ti ti-walk"></i><span>Andando</span></div>
+          <div class="tc" data-v="Bicicleta o patinete" data-p="cycling" onclick="selT('tgA',this);calcRoute()"><i class="ti ti-bike"></i><span>Bici / patinete</span></div>
+          <div class="tc" data-v="Transporte público" data-p="driving" data-px="1" onclick="selT('tgA',this);calcRoute()"><i class="ti ti-bus"></i><span>Transp. público</span></div>
+          <div class="tc" data-v="Moto" data-p="driving" onclick="selT('tgA',this);calcRoute()"><i class="ti ti-motorbike"></i><span>Moto</span></div>
+          <div class="tc" data-v="Coche compartido (conductor)" data-p="driving" onclick="selT('tgA',this);calcRoute()"><i class="ti ti-users"></i><span>Coche comp. (conductor)</span></div>
+          <div class="tc" data-v="Coche compartido (acompañante)" data-p="driving" onclick="selT('tgA',this);calcRoute()"><i class="ti ti-user-plus"></i><span>Coche comp. (acomp.)</span></div>
+          <div class="tc" data-v="Coche (uso individual)" data-p="driving" onclick="selT('tgA',this);calcRoute()"><i class="ti ti-car"></i><span>Coche individual</span></div>
+        </div>
+        <div id="rbox2" class="rbox hidden" style="margin-top:10px"></div>
+      </div>
+
+      <div class="fld">
+        <label>4. Tiempo habitual de trayecto <span class="req">*</span></label>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="tiempo" value="Menos de 10 min"/><span>Menos de 10 minutos</span></label>
+          <label class="opt"><input type="radio" name="tiempo" value="10-20 min"/><span>10–20 minutos</span></label>
+          <label class="opt"><input type="radio" name="tiempo" value="30-45 min"/><span>30–45 minutos</span></label>
+          <label class="opt"><input type="radio" name="tiempo" value="Más de 45 min"/><span>Más de 45 minutos</span></label>
+        </div>
+      </div>
+
+      <div class="slbl">Transporte deseado</div>
+      <div class="fld">
+        <label>5. ¿Cómo te gustaría desplazarte? <span class="req">*</span>
+          <small>Si estás satisfecho con tu modo actual, selecciónalo de nuevo.</small></label>
+        <div class="tgrid" id="tgD">
+          <div class="tc" data-v="Andando" onclick="selT('tgD',this)"><i class="ti ti-walk"></i><span>Andando</span></div>
+          <div class="tc" data-v="Bicicleta o patinete" onclick="selT('tgD',this)"><i class="ti ti-bike"></i><span>Bici / patinete</span></div>
+          <div class="tc" data-v="Transporte público" onclick="selT('tgD',this)"><i class="ti ti-bus"></i><span>Transp. público</span></div>
+          <div class="tc" data-v="Moto" onclick="selT('tgD',this)"><i class="ti ti-motorbike"></i><span>Moto</span></div>
+          <div class="tc" data-v="Coche compartido (acompañante)" onclick="selT('tgD',this)"><i class="ti ti-user-plus"></i><span>Coche comp. (acomp.)</span></div>
+          <div class="tc" data-v="Coche compartido (conductor)" onclick="selT('tgD',this)"><i class="ti ti-users"></i><span>Coche comp. (conductor)</span></div>
+          <div class="tc" data-v="Coche (uso individual)" onclick="selT('tgD',this)"><i class="ti ti-car"></i><span>Coche individual</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ C: VEHÍCULO ══ -->
+  <div class="step" id="step3">
+    <div class="card">
+      <div class="sbadge">Sección C · 4 de 5</div>
+      <div class="stitle">Vehículo privado y aparcamiento</div>
+      <div class="ssub">Responde solo si usas coche o moto como modo de transporte principal.</div>
+      <div class="aw"><i class="ti ti-info-circle"></i><span>Si no usas vehículo privado, puedes pasar directamente a la sección D.</span></div>
+
+      <div class="fld">
+        <label>1. Tecnología del vehículo</label>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="tecno" value="Diésel"/><span>Diésel</span></label>
+          <label class="opt"><input type="radio" name="tecno" value="Gasolina"/><span>Gasolina</span></label>
+          <label class="opt"><input type="radio" name="tecno" value="100% Eléctrico"/><span>100% Eléctrico</span></label>
+          <label class="opt"><input type="radio" name="tecno" value="Híbrido"/><span>Híbrido</span></label>
+          <label class="opt"><input type="radio" name="tecno" value="Híbrido enchufable"/><span>Híbrido enchufable</span></label>
+          <label class="opt"><input type="radio" name="tecno" value="Otro"/><span>Otro</span></label>
+        </div>
+      </div>
+      <div class="fld">
+        <label>2. ¿Dónde estacionas?</label>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="estac" value="Aparcamiento público"/><span>Aparcamiento público</span></label>
+          <label class="opt"><input type="radio" name="estac" value="Vía pública"/><span>Vía pública</span></label>
+        </div>
+      </div>
+      <div class="fld">
+        <label>3. ¿Usarías alternativas si mejorasen las condiciones?</label>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="altveh" value="Sí"/><span>Sí</span></label>
+          <label class="opt"><input type="radio" name="altveh" value="No"/><span>No</span></label>
+          <label class="opt"><input type="radio" name="altveh" value="Depende de las condiciones"/><span>Depende de las condiciones</span></label>
+        </div>
+      </div>
+      <div class="fld">
+        <label>4. ¿Compartirías coche con compañeros/as?</label>
+        <div class="opts">
+          <label class="opt"><input type="radio" name="comp" value="Sí"/><span>Sí</span></label>
+          <label class="opt"><input type="radio" name="comp" value="No"/><span>No</span></label>
+          <label class="opt"><input type="radio" name="comp" value="Tal vez"/><span>Tal vez</span></label>
+          <label class="opt"><input type="radio" name="comp" value="Ya lo hago"/><span>Ya lo hago</span></label>
+        </div>
+      </div>
+      <div class="fld">
+        <label for="pasaj">5. Pasajeros habituales</label>
+        <input type="number" id="pasaj" placeholder="0" min="0" max="8" style="max-width:120px"/>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ D: OBSTÁCULOS ══ -->
+  <div class="step" id="step4">
+    <div class="card">
+      <div class="sbadge">Sección D · 5 de 5</div>
+      <div class="stitle">Potenciales y obstáculos</div>
+      <div class="ssub">Última sección. ¡Gracias por tu participación!</div>
+
+      <div class="slbl">Potencial de cambio modal</div>
+      <div class="fld">
+        <label>1. ¿Iría en bicicleta o caminando si hubiera itinerarios seguros?</label>
+        <div class="opts"><label class="opt"><input type="radio" name="d1" value="Sí"/><span>Sí</span></label><label class="opt"><input type="radio" name="d1" value="No"/><span>No</span></label><label class="opt"><input type="radio" name="d1" value="Tal vez"/><span>Tal vez</span></label></div>
+      </div>
+      <div class="fld">
+        <label>2. ¿Usaría una lanzadera de empresa si existiera?</label>
+        <div class="opts"><label class="opt"><input type="radio" name="d2" value="Sí"/><span>Sí</span></label><label class="opt"><input type="radio" name="d2" value="No"/><span>No</span></label><label class="opt"><input type="radio" name="d2" value="Dependería de horarios"/><span>Dependería de horarios y recorridos</span></label></div>
+      </div>
+      <div class="fld">
+        <label>3. ¿Te gustaría una app de carpooling con compañeros/as?</label>
+        <div class="opts"><label class="opt"><input type="radio" name="d3" value="Sí"/><span>Sí</span></label><label class="opt"><input type="radio" name="d3" value="No"/><span>No</span></label><label class="opt"><input type="radio" name="d3" value="Tal vez"/><span>Tal vez</span></label><label class="opt"><input type="radio" name="d3" value="No conozco estas apps"/><span>No conozco estas apps</span></label></div>
+      </div>
+      <div class="fld">
+        <label>4. ¿Usarías el transporte público si hubiera opciones disponibles?</label>
+        <div class="opts"><label class="opt"><input type="radio" name="d4" value="Sí"/><span>Sí</span></label><label class="opt"><input type="radio" name="d4" value="No"/><span>No</span></label><label class="opt"><input type="radio" name="d4" value="Tal vez"/><span>Tal vez</span></label></div>
+      </div>
+
+      <div class="slbl">Obstáculos</div>
+      <div class="fld">
+        <label>5. Obstáculos para compartir coche</label>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" name="obsc" value="No conozco compañeros con rutas compatibles"/><span>No conozco compañeros con rutas compatibles</span></label>
+          <label class="opt"><input type="checkbox" name="obsc" value="Falta de incentivos"/><span>Falta de incentivos</span></label>
+          <label class="opt"><input type="checkbox" name="obsc" value="Pérdida de flexibilidad horaria"/><span>Pérdida de flexibilidad horaria</span></label>
+          <label class="opt"><input type="checkbox" name="obsc" value="Ninguno"/><span>No veo ningún obstáculo</span></label>
+        </div>
+      </div>
+      <div class="fld">
+        <label>6. Obstáculos para usar transporte público</label>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" name="obstp" value="Parada lejana al centro"/><span>Parada lejana al centro de trabajo</span></label>
+          <label class="opt"><input type="checkbox" name="obstp" value="Sin ruta existente"/><span>No existe ruta desde mi municipio</span></label>
+          <label class="opt"><input type="checkbox" name="obstp" value="Coste elevado"/><span>Coste elevado</span></label>
+          <label class="opt"><input type="checkbox" name="obstp" value="Horarios incompatibles"/><span>Horarios incompatibles con mi turno</span></label>
+        </div>
+      </div>
+      <div class="fld">
+        <label>7. Obstáculos para bicicleta o ir andando</label>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" name="obsb" value="Sin infraestructura segura"/><span>Falta de infraestructura segura</span></label>
+          <label class="opt"><input type="checkbox" name="obsb" value="Sin aparcamiento para bici"/><span>Sin aparcamiento seguro para bicicleta</span></label>
+          <label class="opt"><input type="checkbox" name="obsb" value="Incomodidad al llegar"/><span>Incomodidad al llegar al trabajo</span></label>
+          <label class="opt"><input type="checkbox" name="obsb" value="Distancia excesiva"/><span>Distancia excesiva</span></label>
+          <label class="opt"><input type="checkbox" name="obsb" value="Climatología"/><span>Inclemencias climatológicas</span></label>
+        </div>
+      </div>
+      <div class="fld">
+        <label>8. Obstáculos para usar coche o moto</label>
+        <div class="opts">
+          <label class="opt"><input type="checkbox" name="obscm" value="Falta aparcamiento"/><span>Falta de aparcamiento</span></label>
+          <label class="opt"><input type="checkbox" name="obscm" value="Congestión entrada"/><span>Congestión a la entrada</span></label>
+          <label class="opt"><input type="checkbox" name="obscm" value="Accesos en mal estado"/><span>Accesos en mal estado</span></label>
+          <label class="opt"><input type="checkbox" name="obscm" value="Ninguno"/><span>No veo ningún obstáculo</span></label>
+        </div>
+      </div>
+
+      <div class="slbl">Prioridades y sugerencias</div>
+      <div class="fld">
+        <label for="prio">9. ¿Qué aspectos son prioritarios para mejorar?</label>
+        <textarea id="prio" placeholder="Describe tus prioridades…"></textarea>
+      </div>
+      <div class="fld">
+        <label for="sug">10. Sugerencias o comentarios adicionales</label>
+        <textarea id="sug" placeholder="Cualquier comentario útil…"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ENVIADO ══ -->
+  <div class="step" id="step5">
+    <div class="card">
+      <div class="success" id="successBox">
+        <div style="font-size:36px;margin-bottom:12px">⏳</div>
+        <h2>Enviando…</h2>
+        <p>Guardando tu respuesta de forma anónima.</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom nav -->
+<div class="bot" id="bot">
+  <button class="btn-back gone" id="btnBack" onclick="prev()"><i class="ti ti-arrow-left"></i></button>
+  <button class="btn-next" id="btnNext" onclick="next()">
+    <span id="btnLbl">Siguiente</span>
+    <i class="ti ti-arrow-right" id="btnIco"></i>
+  </button>
+</div>
+
+<script>
+
+// ══════════════════════════════════════════
+const CFG = {
+  supabaseUrl:  'https://hlvpcfplegpxysnaupcg.supabase.co',
+  supabaseAnon: 'sb_publishable_s21BP6muktA9FUdLoGrFxw_wpS7nsA0',        // publishable key (pública, rol anon)
+  table:        'encuesta_movilidad',
+  workLat:       41.6488,
+  workLon:      -0.8891,
+  workName:     'PYRSA',
+  noiseM:        500        // metros de ruido para anonimizar coordenadas
+};
+// ══════════════════════════════════════════
+
+let cur = 0;
+let map = null, mkr = null, rtLyr = null;
+let geo = {lat:null,lon:null};
+let route = {km:null,min:null,profile:null,proxy:false};
+
+const LABELS = ['A. Perfil','Ubicación','B. Movilidad','C. Vehículo','D. Obstáculos'];
+const NEXT   = ['Siguiente: ubicación','Siguiente: movilidad','Siguiente: vehículo','Siguiente: obstáculos','Enviar respuesta'];
+
+function goTo(n){
+  document.querySelectorAll('.step').forEach((s,i)=>s.classList.toggle('active',i===n));
+  [0,1,2,3,4].forEach(i=>{
+    document.getElementById('ps'+i)?.classList.toggle('done',i<n);
+    document.getElementById('ps'+i)?.classList.toggle('active',i===n);
+    document.getElementById('pn'+i)?.classList.toggle('active',i===n);
+  });
+  if(n<5){
+    document.getElementById('plbl').textContent=LABELS[n];
+    document.getElementById('pstep').textContent=(n+1)+' / 5';
+    document.getElementById('btnLbl').textContent=NEXT[n];
+    document.getElementById('btnIco').className=n===4?'ti ti-send':'ti ti-arrow-right';
+  }
+  document.getElementById('btnBack').classList.toggle('gone',n===0);
+  document.getElementById('bot').style.display=n===5?'none':'flex';
+  document.getElementById('progBar').style.display=n===5?'none':'block';
+  if(n===1&&!map)setTimeout(initMap,80);
+  cur=n;
+  document.getElementById('scroll').scrollTop=0;
+}
+function next(){
+  const err=validateStep(cur);
+  if(err){toast(err);return;}
+  if(cur===4)submit();else goTo(cur+1);
+}
+function prev(){if(cur>0)goTo(cur-1);}
+function sh(id,v){document.getElementById(id).classList.toggle('hidden',!v);}
+
+// ── Validación de campos obligatorios ─────────────
+function validateStep(n){
+  if(n===0){
+    if(!radio('genero'))    return'Indica tu género para continuar.';
+    if(!val('selEdad'))     return'Selecciona tu rango de edad.';
+    if(!radio('limitacion'))return'Responde a la pregunta sobre limitación de movilidad.';
+    if(!radio('frecuencia'))return'Indica con qué frecuencia acudes al trabajo.';
+    if(!radio('turno'))     return'Selecciona tu turno habitual.';
+  }else if(n===1){
+    if(!val('municipio').trim())return'Indica tu municipio de residencia.';
+  }else if(n===2){
+    if(!val('hlleg'))   return'Indica tu hora de llegada.';
+    if(!val('hsal'))    return'Indica tu hora de salida.';
+    if(!getT('tgA'))    return'Selecciona tu modo de transporte actual.';
+    if(!radio('tiempo'))return'Indica el tiempo habitual de trayecto.';
+    if(!getT('tgD'))    return'Indica cómo te gustaría desplazarte.';
+  }
+  return null; // pasos 3 y 4 sin campos obligatorios
+}
+
+let toastTimer=null;
+function toast(msg){
+  let t=document.getElementById('toast');
+  if(!t){
+    t=document.createElement('div');t.id='toast';
+    t.style.cssText='position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));'+
+      'transform:translateX(-50%);background:var(--r600);color:#fff;padding:11px 16px;'+
+      'border-radius:10px;font-size:13px;max-width:88%;text-align:center;z-index:500;'+
+      'box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;transition:opacity .2s';
+    document.body.appendChild(t);
+  }
+  t.textContent=msg;t.style.opacity='1';
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{t.style.opacity='0';},3200);
+}
+
+// ── Geocode ───────────────────────────────
+function geocode(){
+  const q=document.getElementById('fdir').value.trim();
+  const st=document.getElementById('geo-st');
+  if(!q)return;
+  st.textContent='Buscando…';st.style.color='var(--muted)';
+  fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&countrycodes=es&q='+encodeURIComponent(q),
+    {headers:{'Accept-Language':'es'}})
+    .then(r=>r.json()).then(d=>{
+      if(!d.length){st.textContent='⚠ No encontrado. Prueba con más detalle.';return;}
+      geo.lat=parseFloat(d[0].lat);geo.lon=parseFloat(d[0].lon);
+      st.innerHTML='<span style="color:var(--g600)">✓ Localizado correctamente</span>';
+      placeMarker(geo.lat,geo.lon);
+      map.flyTo([geo.lat,geo.lon],14,{duration:1});
+      const sel=document.querySelector('#tgA .tc.sel');
+      if(sel)calcRoute();
+    }).catch(()=>{st.textContent='Error de red.';});
+}
+
+// ── Map ───────────────────────────────────
+function initMap(){
+  map=L.map('map',{zoomControl:true,tap:true}).setView([CFG.workLat,CFG.workLon],11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+    {attribution:'© OpenStreetMap',maxZoom:18}).addTo(map);
+  L.marker([CFG.workLat,CFG.workLon],{icon:L.divIcon({
+    className:'',
+    html:'<div style="width:16px;height:16px;border-radius:50%;background:#1D9E75;border:3px solid #085041;box-shadow:0 2px 6px rgba(0,0,0,.35)"></div>',
+    iconSize:[16,16],iconAnchor:[8,8]
+  })}).addTo(map).bindPopup('<b>'+CFG.workName+'</b>');
+  map.on('click',e=>{placeMarker(e.latlng.lat,e.latlng.lng);const s=document.querySelector('#tgA .tc.sel');if(s)calcRoute();});
+  setTimeout(()=>map.invalidateSize(),200);
+}
+
+function placeMarker(lat,lon){
+  geo.lat=lat;geo.lon=lon;
+  if(mkr)mkr.setLatLng([lat,lon]);
+  else{
+    mkr=L.marker([lat,lon],{draggable:true}).addTo(map).bindPopup('Tu domicilio');
+    mkr.on('dragend',e=>{const p=e.target.getLatLng();geo.lat=p.lat;geo.lon=p.lng;
+      const s=document.querySelector('#tgA .tc.sel');if(s)calcRoute();});
+  }
+}
+
+// ── OSRM routing ──────────────────────────
+const PLABELS={driving:'en coche',cycling:'en bicicleta',foot:'a pie'};
+const PCOLORS={driving:'#3B6D11',cycling:'#0F6E56',foot:'#854F0B'};
+
+function calcRoute(){
+  if(!geo.lat){showRB('warn','📍 Primero localiza tu dirección en el paso anterior.');return;}
+  const sel=document.querySelector('#tgA .tc.sel');
+  if(!sel)return;
+  const profile=sel.dataset.p||'driving';
+  const proxy=sel.dataset.px==='1';
+  setRB('loading','<i class="ti ti-loader-2 spin"></i> Calculando ruta…');
+  fetch('https://router.project-osrm.org/route/v1/'+profile+'/'+
+    geo.lon+','+geo.lat+';'+CFG.workLon+','+CFG.workLat+'?overview=full&geometries=geojson')
+    .then(r=>r.json()).then(d=>{
+      if(!d.routes?.length){setRB('err','No se pudo calcular la ruta. Comprueba la conexión.');return;}
+      const rt=d.routes[0];
+      route={km:(rt.distance/1000).toFixed(1),min:Math.round(rt.duration/60),profile,proxy};
+      if(rtLyr)map.removeLayer(rtLyr);
+      rtLyr=L.polyline(rt.geometry.coordinates.map(c=>[c[1],c[0]]),
+        {color:PCOLORS[profile]||'#3B6D11',weight:4,opacity:.75}).addTo(map);
+      map.fitBounds(L.latLngBounds([[geo.lat,geo.lon],[CFG.workLat,CFG.workLon]]),{padding:[28,28]});
+      const proxyNote=proxy?'<div class="rbox-proxy">⚠ Transporte público: distancia por carretera como referencia.</div>':'';
+      setRB('ok',`<div class="rbox-main">${route.km} km</div>
+        <div class="rbox-sub">Ruta ${PLABELS[profile]||profile} · ~${fmtMin(route.min)}</div>${proxyNote}`,true);
+    }).catch(()=>setRB('err','Error al calcular ruta.'));
+}
+
+function setRB(type,html,raw){
+  ['rbox1','rbox2'].forEach(id=>{
+    const b=document.getElementById(id);if(!b)return;
+    b.className='rbox '+type;b.classList.remove('hidden');
+    b.innerHTML=raw?html:'<div style="font-size:13px;color:var(--muted)">'+html+'</div>';
+  });
+}
+function showRB(type,msg){setRB(type,msg,false);}
+function fmtMin(m){return m<60?m+' min':Math.floor(m/60)+' h '+(m%60?m%60+' min':'');}
+
+// ── Cards ─────────────────────────────────
+function selT(gid,el){
+  document.querySelectorAll('#'+gid+' .tc').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function getT(gid){const s=document.querySelector('#'+gid+' .tc.sel');return s?s.dataset.v:'';}
+function radio(n){const e=document.querySelector('input[name="'+n+'"]:checked');return e?e.value:'';}
+function checks(n){return[...document.querySelectorAll('input[name="'+n+'"]:checked')].map(i=>i.value).join(' | ');}
+function val(id){const e=document.getElementById(id);return e?e.value:'';}
+
+// ── Noise for anonymisation ───────────────
+function addNoise(lat,lon,r){
+  const deg=r/111320;
+  const a=Math.random()*2*Math.PI;
+  const d=deg*Math.sqrt(Math.random());
+  return{lat:+(lat+d*Math.cos(a)).toFixed(5),lon:+(lon+d*Math.sin(a)/Math.cos(lat*Math.PI/180)).toFixed(5)};
+}
+
+// ── Submit to Supabase ─────────────────────
+async function submit(){
+  goTo(5);
+  const box=document.getElementById('successBox');
+
+  let aLat='',aLon='';
+  if(geo.lat&&geo.lon){const n=addNoise(geo.lat,geo.lon,CFG.noiseM);aLat=''+n.lat;aLon=''+n.lon;}
+
+  const payload={
+    lat:aLat, lon:aLon,
+    municipio:          val('municipio'),
+    distancia_km:       route.km||null,
+    tiempo_ruta_min:    route.min?''+route.min:null,
+    perfil_routing:     route.profile||null,
+    genero:             radio('genero'),
+    edad:               val('selEdad'),
+    limitacion:         radio('limitacion'),
+    adaptacion:         radio('adapt'),
+    frecuencia:         radio('frecuencia'),
+    turno:              radio('turno'),
+    hora_llegada:       val('hlleg'),
+    hora_salida:        val('hsal'),
+    transporte_actual:  getT('tgA'),
+    tiempo_percibido:   radio('tiempo'),
+    transporte_deseado: getT('tgD'),
+    tecnologia:         radio('tecno'),
+    estacionamiento:    radio('estac'),
+    alt_vehiculo:       radio('altveh'),
+    compartir:          radio('comp'),
+    pasajeros:          val('pasaj')||null,
+    d1:                 radio('d1'), d2:radio('d2'), d3:radio('d3'), d4:radio('d4'),
+    obs_coche_comp:     checks('obsc'),
+    obs_tp:             checks('obstp'),
+    obs_bici:           checks('obsb'),
+    obs_coche_moto:     checks('obscm'),
+    prioridades:        val('prio'),
+    sugerencias:        val('sug')
+  };
+
+  try{
+    const resp=await fetch(CFG.supabaseUrl+'/rest/v1/'+CFG.table,{
+      method:'POST',
+      headers:{
+        'apikey':CFG.supabaseAnon,
+        'Content-Type':'application/json',
+        'Prefer':'return=minimal'
+      },
+      body:JSON.stringify(payload)
+    });
+    if(!resp.ok){const e=await resp.text();throw new Error(e);}
+    box.innerHTML=`
+      <div class="ok-ring"><i class="ti ti-check"></i></div>
+      <h2>¡Respuesta enviada!</h2>
+      <p>Gracias por participar en el Plan de Movilidad de PYRSA.<br>Tu aportación es muy valiosa.</p>
+      <div class="anon-box">
+        <b>¿Qué hemos guardado?</b><br>
+        ✓ Municipio de referencia<br>
+        ✓ Coordenadas desplazadas ~${CFG.noiseM} m (no tu dirección exacta)<br>
+        ✓ Distancia y tiempo de ruta calculados por OSRM<br>
+        ✓ Respuestas al cuestionario<br>
+        ✗ No se ha guardado tu nombre, email ni dirección
+      </div>`;
+  }catch(e){
+    box.innerHTML=`
+      <div style="font-size:36px;margin-bottom:12px">⚠️</div>
+      <h2>Error al enviar</h2>
+      <p style="color:var(--r600);font-size:13px">${e.message}</p>
+      <p style="font-size:12px;color:var(--muted);margin-top:10px">Comprueba la URL y la clave de Supabase en el bloque CFG.</p>
+      <button class="btn-next" style="max-width:200px;margin:16px auto 0" onclick="goTo(4)">
+        <i class="ti ti-arrow-left"></i> Volver
+      </button>`;
+  }
+}
+</script>
+</body>
+</html>
