@@ -1,2 +1,2 @@
-# Encuesta-de-movilidad---Circe-Centro-Tecnol-gico
+# Encuesta-de-movilidad---Circe-Centro-Tecnológico
 Encuesta de movilidad - Circe Centro Tecnológico
